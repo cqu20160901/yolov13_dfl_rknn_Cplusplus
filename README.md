@@ -1,16 +1,21 @@
-&emsp;&emsp; yolov13部署。
-
-特别说明：如有侵权告知删除，谢谢。
+# yolov13部署。
 
 完整代码：包括onnx转rknn和测试代码、rknn板端部署C++代码
+
 [【onnx转rknn和测试代码】](https://github.com/cqu20160901/yolov13_onnx_rknn)
+
 [【rknn板端部署C++代码】](https://github.com/cqu20160901/yolov13_dfl_rknn_Cplusplus)
 
 # 1 模型训练
+
 &emsp;&emsp;yolov13 训练参考官方代码。
+
 # 2 导出 yolov13 onnx
-&emsp;&emsp; 导出onnx修改以下几处，和之前的导出yolov8、yolov11、yolov12等方式一样。
+
+导出onnx修改以下几处，和之前的导出yolov8、yolov11、yolov12等方式一样。
+
 第一处：修改导出onnx的检测头
+
 ![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/45b36003770a4b2bb2d70e194b830193.png)
 
 ```python
@@ -25,7 +30,9 @@
 ```
 
 第二处：增加保存onnx代码
+
 ![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/064306acddd2429fb1cfafeb93afe47f.png)
+
 
 ```python
         print("===========  onnx =========== ")
@@ -49,18 +56,23 @@ results = model(task='detect', source='./test.jpg', save=True)  # predict on an 
 ***特别说明：*** 修改完以上两处后运行会报错，但不影响onnx的生成；生成onnx后强烈建议用from onnxsim import simplify 处理一下再转rknn。
 
 # 3 测试onnx效果
+
 pytorch效果
+
 ![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/b866a799d3584c8f9e6e83bde03a5997.jpeg)
 
 onnx效果
+
 ![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/b7e935734b0942d2b309508f09053a38.jpeg)
 # 4 onnx转rknn
 onnx转rknn[代码链接](https://github.com/cqu20160901/yolov13_onnx_rknn/tree/main/yolov13n_rknn)
 
 转rknn后仿真结果
+
 ![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/e25c03b719b14e2d835c3f5420734d64.jpeg)
 
 # 5 rk3588板子测试yolov11模型
+
 使用的 rknn_toolkit 版本：rknn_toolkit2-2.2.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 C++代码中的库和工具链的版本注意对应适配。
 
@@ -99,8 +111,11 @@ int main(int argc, char **argv)
 ```
 
 3）板端效果和时耗
+
 ![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/eefc9e3da1084cf1822204f3b0d0af88.jpeg)
+
 ![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/897e9840ea334b6ea0ece709b900f8af.png)
 
 这个时耗比较长，毫无疑问很多算子切换到cpu上进行的。
+
 ![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/bf1aec2a959d4333bf180f5058b3b1ae.png)
