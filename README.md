@@ -1,15 +1,74 @@
-# yolov11_dfl_rknn_Cplusplus
-yolov11 rk3588 部署版本，将DFL放在后处理中，转换工具版本 rknn_toolkit2-2.2.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.
+&emsp;&emsp; yolov13部署。
 
+特别说明：如有侵权告知删除，谢谢。
 
-导出onnx、转rknn流程说明[【yolov11 部署瑞芯微rk3588、RKNN部署工程难度小、模型推理速度快】](https://blog.csdn.net/zhangqian_1/article/details/142722526)
+完整代码：包括onnx转rknn和测试代码、rknn板端部署C++代码
+[【onnx转rknn和测试代码】](https://github.com/cqu20160901/yolov13_onnx_rknn)
+[【rknn板端部署C++代码】](https://github.com/cqu20160901/yolov13_dfl_rknn_Cplusplus)
 
-## 编译和运行
+# 1 模型训练
+&emsp;&emsp;yolov13 训练参考官方代码。
+# 2 导出 yolov13 onnx
+&emsp;&emsp; 导出onnx修改以下几处，和之前的导出yolov8、yolov11、yolov12等方式一样。
+第一处：修改导出onnx的检测头
+![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/45b36003770a4b2bb2d70e194b830193.png)
+
+```python
+        # 导出 onnx 增加
+        y = []
+        for i in range(self.nl):
+            t1 = self.cv2[i](x[i])
+            t2 = self.cv3[i](x[i])
+            y.append(t1)
+            y.append(t2)
+        return y
+```
+
+第二处：增加保存onnx代码
+![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/064306acddd2429fb1cfafeb93afe47f.png)
+
+```python
+        print("===========  onnx =========== ")
+        import torch
+        dummy_input = torch.randn(1, 3, 640, 640)
+        input_names = ["data"]
+        output_names = ["output1", "output2", "output3", "output4", "output5", "output6"]
+        torch.onnx.export(self.model, dummy_input, "/root/zhangqian/ultralytics-main/yolov13n_80class_ZQ.onnx",
+                          verbose=False, input_names=input_names, output_names=output_names, opset_version=11)
+        print("======================== convert onnx Finished! .... ")
+```
+
+修改完以上两处，运行以下代码：
+
+```python
+from ultralytics import YOLO
+model = YOLO(model='yolov13n.pt')  # load a pretrained model (recommended for training)
+results = model(task='detect', source='./test.jpg', save=True)  # predict on an image
+```
+
+***特别说明：*** 修改完以上两处后运行会报错，但不影响onnx的生成；生成onnx后强烈建议用from onnxsim import simplify 处理一下再转rknn。
+
+# 3 测试onnx效果
+pytorch效果
+![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/b866a799d3584c8f9e6e83bde03a5997.jpeg)
+
+onnx效果
+![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/b7e935734b0942d2b309508f09053a38.jpeg)
+# 4 onnx转rknn
+onnx转rknn[代码链接](https://github.com/cqu20160901/yolov13_onnx_rknn/tree/main/yolov13n_rknn)
+
+转rknn后仿真结果
+![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/e25c03b719b14e2d835c3f5420734d64.jpeg)
+
+# 5 rk3588板子测试yolov11模型
+使用的 rknn_toolkit 版本：rknn_toolkit2-2.2.0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+C++代码中的库和工具链的版本注意对应适配。
+
 
 1）编译
 
 ```
-cd examples/rknn_yolov11_demo_dfl_open
+cd examples/rknn_yolov13_demo_dfl_open
 
 bash build-linux_RK3588.sh
 
@@ -30,33 +89,18 @@ cd install/rknn_yolo_demo_Linux
 
 int main(int argc, char **argv)
 {
-    char model_path[256] = "/home/zhangqian/rknn/examples/rknn_yolov11_demo_dfl_open/model/RK3588/yolov11n_80class_ZQ.rknn";
-    char image_path[256] = "/home/zhangqian/rknn/examples/rknn_yolov11_demo_dfl_open/test.jpg";
-    char save_image_path[256] = "/home/zhangqian/rknn/examples/rknn_yolov11_demo_dfl_open/test_result.jpg";
+    char model_path[256] = "/home/zhangqian/rknn/examples/rknn_yolov13_demo_dfl_open/model/RK3588/yolov13n_80class_ZQ.rknn";
+    char image_path[256] = "/home/zhangqian/rknn/examples/rknn_yolov13_demo_dfl_open/test.jpg";
+    char save_image_path[256] = "/home/zhangqian/rknn/examples/rknn_yolov13_demo_dfl_open/test_result.jpg";
 
     detect(model_path, image_path, save_image_path);
     return 0;
 }
 ```
 
+3）板端效果和时耗
+![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/eefc9e3da1084cf1822204f3b0d0af88.jpeg)
+![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/897e9840ea334b6ea0ece709b900f8af.png)
 
-# 测试效果
-
-## onnx 测试效果
-
-![image](https://github.com/cqu20160901/yolov11_onnx_rknn/blob/main/yolov11n_onnx/test_onnx_result.jpg)
-
-
-## rk3588上测试效果
-
-![images](https://github.com/cqu20160901/yolov11_dfl_rknn_Cplusplus/blob/main/examples/rknn_yolov11_demo_dfl_open/test_result.jpg)
-
-把板端模型推理和后处理时耗也附上，供参考，使用的芯片rk3588，模型输入640x640。
-
-![image](https://github.com/cqu20160901/yolov11_dfl_rknn_Cplusplus/blob/main/examples/rknn_yolov11_demo_dfl_open/yolov11_rk3588_costtime.png)
-
-
-# tenorRT cuda 版本参考(cuda 实现后处理中部分最耗时处理)
-[yolov11_tensorRT_postprocess_cuda](https://github.com/cqu20160901/yolov11_tensorRT_postprocess_cuda)
-
-
+这个时耗比较长，毫无疑问很多算子切换到cpu上进行的。
+![在这里插入图片描述](https://i-blog.csdnimg.cn/direct/bf1aec2a959d4333bf180f5058b3b1ae.png)
